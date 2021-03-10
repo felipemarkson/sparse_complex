@@ -1,0 +1,11 @@
+[package]
+name = "sparse_complex"
+version = "0.1.0"
+authors = ["felipe"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sparse21 = "0.2.1"
+approx = "0.4"
