@@ -1,6 +1,6 @@
 [package]
 name = "sparse_complex"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Felipe M. dos S. Monteiro"]
 edition = "2018"
 license = "MIT"
