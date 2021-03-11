@@ -1,5 +1,10 @@
 # sparse_complex
 
+[![crate](https://img.shields.io/crates/v/sparse_complex.svg)](https://crates.io/crates/sparse_complex)
+[![documentation](https://docs.rs/sparse_complex/badge.svg)](https://docs.rs/sparse_complex)
+[![minimum rustc 1.50](https://img.shields.io/badge/rustc-1.50+-red.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![build status](https://github.com/felipemarkson/sparse_complex/actions/workflows/main.yml/badge.svg)](https://github.com/felipemarkson/sparse_complex/actions)
+
 An abstraction layer for [sparse21](https://crates.io/crates/sparse21/) that adds support for complex sparse matrices.
 
 ## Complex Number representation
@@ -11,6 +16,16 @@ Where the first element is the real part and the second is the imaginary part, a
 let complex_number: (f64, f64) = (1.0 , 1.0) // 1 + j1
 ```
 The use of ```f64``` is a limitation of [sparse21](https://crates.io/crates/sparse21/).
+
+
+## Usage
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+sparse_complex = "0.1"
+```
 
 
 ## Example
