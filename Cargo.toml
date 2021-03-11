@@ -1,8 +1,14 @@
 [package]
 name = "sparse_complex"
 version = "0.1.0"
-authors = ["felipe"]
+authors = ["Felipe M. dos S. Monteiro"]
 edition = "2018"
+license = "MIT"
+description = "An abstraction layer for sparse21 that adds support for complex sparse matrices."
+repository = "https://github.com/felipemarkson/sparse_complex"
+readme = "README.md"
+categories = ["data-structures", "mathematics", "science"]
+keywords = ["linear-algebra", "sparse", "complex", "algebra", "matrix"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
