@@ -113,11 +113,21 @@ impl ComplexMatrix {
         let col = entry.1;
         let (real, imag) = entry.2;
 
-        self.primitive.add_element(row, col, real);
-        self.primitive.add_element(row, col + self.length, -imag);
-        self.primitive.add_element(row + self.length, col, imag);
-        self.primitive
+        const MIN_POS_VALUE:f64 = std::f64::MIN_POSITIVE;
+
+        if real >= MIN_POS_VALUE || real <= -MIN_POS_VALUE{
+            self.primitive.add_element(row, col, real);
+            self.primitive
             .add_element(row + self.length, col + self.length, real);
+
+        }
+
+        if imag >= MIN_POS_VALUE || imag <= -MIN_POS_VALUE{
+            self.primitive.add_element(row, col + self.length, -imag);
+            self.primitive.add_element(row + self.length, col, imag);
+
+        }
+
     }
 
     fn set_length(&mut self) {
