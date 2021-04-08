@@ -62,4 +62,31 @@ mod tests {
         let solution = m.solve(&[(0., 3.), (6., 0.)]);
         assert_eq!(solution.unwrap(), vec![(0., 3.), (-6., 0.)]);
     }
+
+    #[test]
+    fn test_b_imag_is_zero() {
+        let mut m = ComplexMatrix::new();
+        m.add_element(0, 0, (3., 0.));
+        m.add_element(0, 1, (0., 1.));
+        m.add_element(1, 0, (0., -4.));
+        m.add_element(1, 1, (1., 0.));
+
+
+        let solution = m.solve(&[(1., 0.), (5., 0.)]);
+        assert_eq!(solution.unwrap(), vec![(-1., 5.), (-15., -4.)]);
+    }
+
+
+    #[test]
+    fn test_b_real_is_zero() {
+        let mut m = ComplexMatrix::new();
+        m.add_element(0, 0, (3., 0.));
+        m.add_element(0, 1, (0., 1.));
+        m.add_element(1, 0, (0., -4.));
+        m.add_element(1, 1, (1., 0.));
+
+
+        let solution = m.solve(&[(0., 1.), (0., 5.)]);
+        assert_eq!(solution.unwrap(), vec![(-5., -1.), (4., -15.)]);
+    }
 }
