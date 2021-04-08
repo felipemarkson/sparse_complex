@@ -73,7 +73,7 @@ pub struct ComplexMatrix {
     primitive: Matrix,
     entries: Vec<Entry>,
     builded: bool,
-    length: usize,
+    order: usize,
 }
 
 impl ComplexMatrix {
@@ -87,7 +87,7 @@ impl ComplexMatrix {
             primitive: Matrix::new(),
             entries: vec![],
             builded: false,
-            length: 0,
+            order: 0,
         }
     }
 
@@ -102,7 +102,7 @@ impl ComplexMatrix {
             primitive: Matrix::new(),
             entries: entries.to_vec(),
             builded: false,
-            length: 0,
+            order: 0,
         };
         result.build_primitive();
         result
@@ -118,31 +118,31 @@ impl ComplexMatrix {
         if real >= MIN_POS_VALUE || real <= -MIN_POS_VALUE{
             self.primitive.add_element(row, col, real);
             self.primitive
-            .add_element(row + self.length, col + self.length, real);
+            .add_element(row + self.order, col + self.order, real);
 
         }
 
         if imag >= MIN_POS_VALUE || imag <= -MIN_POS_VALUE{
-            self.primitive.add_element(row, col + self.length, -imag);
-            self.primitive.add_element(row + self.length, col, imag);
+            self.primitive.add_element(row, col + self.order, -imag);
+            self.primitive.add_element(row + self.order, col, imag);
 
         }
 
     }
 
-    fn set_length(&mut self) {
+    fn set_order(&mut self) {
         for &(row_m, col_m, _) in self.entries.iter() {
-            if row_m + 1 > self.length {
-                self.length = row_m + 1
+            if row_m + 1 > self.order {
+                self.order = row_m + 1
             }
-            if col_m + 1 > self.length {
-                self.length = col_m + 1
+            if col_m + 1 > self.order {
+                self.order = col_m + 1
             }
         }
     }
 
     fn build_primitive(&mut self) {
-        self.set_length();
+        self.set_order();
         for entry in self.entries.clone() {
             self.set_in_primitive(&entry);
         }
@@ -191,6 +191,24 @@ impl ComplexMatrix {
         match option {
             Some((_, _, value)) => Some(value),
             None => None,
+        }
+    }
+
+    ///  Get the order of the matrix.
+    ///```rust
+    /// use sparse_complex::ComplexMatrix;
+    /// let entries = vec![(0, 0, (1., -1.)), (1, 1, (-1., 1.))];
+    /// let mut m = ComplexMatrix::from_entries(entries);
+    /// assert_eq!(m.order(), 2);
+    /// m.add_element(3, 3, (2., 2.));
+    /// assert_eq!(m.order(), 4);
+    ///```
+    pub fn order(&mut self) -> usize {
+        if self.builded {
+            self.order
+        } else {
+            self.build_primitive();
+            self.order
         }
     }
 
