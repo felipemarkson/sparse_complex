@@ -15,3 +15,12 @@ keywords = ["linear-algebra", "sparse", "complex", "algebra", "matrix"]
 [dependencies]
 sparse21 = "0.2.1"
 approx = "0.4"
+num ="0.4.0"
+
+[build-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+flate2 = "1.0"
+tar = "0.4"
+libc = "0.2.0"
+cc ="1"
