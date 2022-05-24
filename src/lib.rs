@@ -61,7 +61,7 @@ $$ -->
 The ```sparse_complex``` crate is tested for rustc 1.50 and greater.
 
 */
-pub use num::{complex::Complex};
+pub use num::complex::Complex;
 pub use num_traits::float::Float;
 use std::fmt;
 mod solver;

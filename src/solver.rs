@@ -1,7 +1,5 @@
 use num::complex::{Complex32, Complex64};
 
-
-
 extern "C" {
     pub fn solve_cpp(
         a_matrix: *const Complex64,
