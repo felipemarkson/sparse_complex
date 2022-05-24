@@ -14,6 +14,7 @@ We use [num::Complex<T>](https://docs.rs/num/latest/num/struct.Complex.html) to 
 ## Example
 
 Lets consider the complex linear system bellow:
+  
 $$
 \begin{bmatrix}
 1 - j1 & 0\\
@@ -46,6 +47,7 @@ assert_eq!(b, expected);
 ```
 
 The solution of this system is:
+  
 $$
 \frac{1}{2}
 \begin{bmatrix}
