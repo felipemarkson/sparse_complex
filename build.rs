@@ -42,6 +42,7 @@ async fn main() -> Result<(), GenericError> {
         .cpp(true)
         .include(eigen_dir)
         .file("src/solver.cpp")
+        .flag_if_supported("-std=c++1y")
         .compile("solver_cpp");
 
     Ok(())

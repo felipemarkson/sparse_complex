@@ -9,23 +9,19 @@ typedef std::complex<float> cfloat;
 typedef Eigen::Triplet<cdouble> T;
 typedef Eigen::Triplet<cfloat> T32;
 
-extern "C"
-struct cmplx64
+extern "C" struct cmplx64
 {
     double re;
     double im;
 };
 
-extern "C"
-struct cmplx32
+extern "C" struct cmplx32
 {
     float re;
     float im;
 };
 
-
-extern "C"
-void solve_cpp(const cmplx64 *values, const size_t *rows, const size_t *cols, const size_t n_value, cmplx64 *b, const size_t size)
+extern "C" void solve_cpp(const cmplx64 *values, const size_t *rows, const size_t *cols, const size_t n_value, cmplx64 *b, const size_t size)
 {
     Eigen::SparseMatrix<cdouble> A(size, size);
     A.reserve(n_value);
@@ -36,7 +32,7 @@ void solve_cpp(const cmplx64 *values, const size_t *rows, const size_t *cols, co
     Eigen::VectorXcd b_(size);
     Eigen::VectorXcd x(size);
 
-    Eigen::SparseLU<Eigen::SparseMatrix<cdouble>> solver;
+    Eigen::SparseLU< Eigen::SparseMatrix<cdouble> > solver;
 
     double re, im;
     cdouble value;
@@ -75,9 +71,7 @@ void solve_cpp(const cmplx64 *values, const size_t *rows, const size_t *cols, co
     }
 }
 
-
-extern "C"
-void solve_cpp32(const cmplx32 *values, const size_t *rows, const size_t *cols, const size_t n_value, cmplx32 *b, const size_t size)
+extern "C" void solve_cpp32(const cmplx32 *values, const size_t *rows, const size_t *cols, const size_t n_value, cmplx32 *b, const size_t size)
 {
     Eigen::SparseMatrix<cfloat> A(size, size);
     A.reserve(n_value);
@@ -88,7 +82,7 @@ void solve_cpp32(const cmplx32 *values, const size_t *rows, const size_t *cols, 
     Eigen::VectorXcf b_(size);
     Eigen::VectorXcf x(size);
 
-    Eigen::SparseLU<Eigen::SparseMatrix<cfloat>> solver;
+    Eigen::SparseLU< Eigen::SparseMatrix<cfloat> > solver;
 
     float re, im;
     cfloat value;
