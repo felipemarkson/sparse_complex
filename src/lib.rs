@@ -48,7 +48,7 @@ The solution of this system is:
 \end{bmatrix}
 ```
 
-## Vesion Compatible
+## Version Compatible
 The ```sparse_complex``` crate is tested for rustc 1.61 and greater.
 
 */
