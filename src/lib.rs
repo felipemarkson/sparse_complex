@@ -61,35 +61,17 @@ $$ -->
 The ```sparse_complex``` crate is tested for rustc 1.50 and greater.
 
 */
-use num::{complex::Complex, Num, Zero};
-use num_traits::float::Float;
+pub use num::{complex::Complex};
+pub use num_traits::float::Float;
 use std::fmt;
 mod solver;
-mod tools;
-
-#[derive(Clone, Copy, PartialEq)]
-pub struct Entry<T: Float> {
-    pub row: usize,
-    pub col: usize,
-    pub value: Complex<T>,
-}
-impl<T: Float> Entry<T> {
-    pub fn new(row: usize, col: usize, value: Complex<T>) -> Entry<T> {
-        Entry { row, col, value }
-    }
-}
-
-impl fmt::Debug for Entry<f64> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}, {}, {:?})", self.row, self.col, self.value)
-    }
-}
 
 /// The complex matrix struct
 #[derive(Clone, PartialEq)]
 pub struct ComplexMatrix<T: Float> {
-    entries: Vec<Entry<T>>,
-    order: usize,
+    entries: Vec<Complex<T>>,
+    rows: Vec<usize>,
+    cols: Vec<usize>,
 }
 
 impl<T: Float> ComplexMatrix<T> {
@@ -101,7 +83,16 @@ impl<T: Float> ComplexMatrix<T> {
     pub fn new() -> Self {
         ComplexMatrix {
             entries: vec![],
-            order: 0,
+            rows: vec![],
+            cols: vec![],
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        ComplexMatrix {
+            entries: Vec::with_capacity(capacity),
+            rows: Vec::with_capacity(capacity),
+            cols: Vec::with_capacity(capacity),
         }
     }
 
@@ -111,40 +102,20 @@ impl<T: Float> ComplexMatrix<T> {
     /// let entries = vec![(0, 0, (1., 1.)), (1, 1, (1., 1.))];
     /// let mut m = ComplexMatrix::from_entries(entries);
     ///```
-    pub fn from_entries(entries: Vec<Entry<T>>) -> Self {
-        ComplexMatrix { entries, order: 0 }
+    pub fn from_entries(entries: Vec<(usize, usize, Complex<T>)>) -> Self {
+        let mut m = ComplexMatrix::with_capacity(entries.len());
+
+        for (row, col, value) in entries {
+            m.add_element(row, col, value);
+        }
+        m
     }
 
-    fn set_order(&mut self) {
-        for &entry in self.entries.iter() {
-            if entry.row + 1 > self.order {
-                self.order = entry.row + 1
-            }
-            if entry.col + 1 > self.order {
-                self.order = entry.col + 1
-            }
-        }
-    }
-
-    /// Add or set an element at location ```(row, col)``` with value ```(real, imag)```.
-    pub fn add_element(&mut self, new: Entry<T>) {
-        if new.value != Complex::<T>::zero() {
-            self.entries = self
-                .entries
-                .iter()
-                .copied()
-                .filter(|&entry| entry.row != new.row && entry.col != new.col)
-                .collect();
-
-            self.entries.push(new);
-        }
-    }
-
-    /// Add elements correspoding to each triplet ```(row, col, (real, imag))```.
-    pub fn add_elements(&mut self, entries: Vec<Entry<T>>) {
-        for entry in entries.into_iter() {
-            self.add_element(entry)
-        }
+    /// Add or set an element at location ```(row, col)``` with value.
+    pub fn add_element(&mut self, row: usize, col: usize, value: Complex<T>) {
+        self.entries.push(value);
+        self.rows.push(row);
+        self.cols.push(col);
     }
 
     ///  Returns the Element-value at ```(row, col)``` if present, or None if not.
@@ -156,28 +127,17 @@ impl<T: Float> ComplexMatrix<T> {
     /// assert_eq!(m.get(0,0), Some((1., -1.)));
     /// assert_eq!(m.get(1,1), Some((-1., 1.)));
     ///```
-    pub fn get(&self, row: usize, col: usize) -> Option<Entry<T>> {
-        self.entries
+    pub fn get(&self, row: usize, col: usize) -> Option<&Complex<T>> {
+        self.rows
             .iter()
-            .copied()
-            .filter(|&entry| (entry.row == row) && (entry.col == col))
-            .next()
+            .zip(self.cols.iter())
+            .zip(self.entries.iter())
+            .find(|&((r, c), _)| *r == row && *c == col)
+            .map(|(_, v)| v)
     }
+}
 
-    ///  Get the order of the matrix.
-    ///```rust
-    /// use sparse_complex::ComplexMatrix;
-    /// let entries = vec![(0, 0, (1., -1.)), (1, 1, (-1., 1.))];
-    /// let mut m = ComplexMatrix::from_entries(entries);
-    /// assert_eq!(m.order(), 2);
-    /// m.add_element(3, 3, (2., 2.));
-    /// assert_eq!(m.order(), 4);
-    ///```
-    pub fn order(&mut self) -> usize {
-        self.set_order();
-        self.order
-    }
-
+impl ComplexMatrix<f64> {
     /// Solve the system `Ax=b`, where:
     /// * `A` is a complex matrix
     /// * `b` is a complex vector
@@ -200,19 +160,71 @@ impl<T: Float> ComplexMatrix<T> {
     ///     let solution = A.solve(&b);
     ///     assert_eq!(solution.unwrap(), vec![(0.5, -0.5), (0.5, 0.5)]);
     ///```
-    pub fn solve(&mut self, _b: &mut [Complex<T>]) -> Result<(), &'static str> {
-        todo!()
+    pub fn solve(&self, b: &mut [Complex<f64>]) -> Result<(), &'static str> {
+        unsafe {
+            solver::solve_cpp(
+                self.entries.as_ptr(),
+                self.rows.as_ptr(),
+                self.cols.as_ptr(),
+                self.entries.len(),
+                b.as_mut_ptr(),
+                b.len(),
+            )
+        }
+
+        Ok(())
+    }
+}
+
+impl ComplexMatrix<f32> {
+    /// Solve the system `Ax=b`, where:
+    /// * `A` is a complex matrix
+    /// * `b` is a complex vector
+    /// * `x` is the return value.
+    ///
+    /// Returns a `Result` containing the vector with ```(real, imag)``` solutions.
+    /// Returns an `Err` if unsuccessful.
+    ///
+    /// This solution use the LU factorization implemented by [sparse21](https://crates.io/crates/sparse21/).
+    ///
+    ///```rust
+    ///     use sparse_complex::ComplexMatrix;
+    ///
+    ///     let mut A = ComplexMatrix::new();
+    ///     A.add_element(0, 0, (1., 1.));
+    ///     A.add_element(1, 1, (1., 1.));
+    ///
+    ///     let b = [(1., 0.), (0., 1.)];
+    ///
+    ///     let solution = A.solve(&b);
+    ///     assert_eq!(solution.unwrap(), vec![(0.5, -0.5), (0.5, 0.5)]);
+    ///```
+    pub fn solve(&self, b: &mut [Complex<f32>]) -> Result<(), &'static str> {
+        unsafe {
+            solver::solve_cpp32(
+                self.entries.as_ptr(),
+                self.rows.as_ptr(),
+                self.cols.as_ptr(),
+                self.entries.len(),
+                b.as_mut_ptr(),
+                b.len(),
+            )
+        }
+
+        Ok(())
     }
 }
 
 impl<T: Float + std::fmt::Display> fmt::Debug for ComplexMatrix<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut msg = String::from("ComplexMatrix { \n");
-        for entry in self.entries.iter() {
-            msg = format!(
-                "{}  ({},{}) -> {}\n",
-                msg, entry.row, entry.col, entry.value
-            )
+        let elements = self
+            .rows
+            .iter()
+            .zip(self.cols.iter())
+            .zip(self.entries.iter());
+        for ((row, col), value) in elements {
+            msg = format!("{}  ({},{}) -> {}\n", msg, row, col, value)
         }
         write!(f, "{}}}", msg)
     }
@@ -224,39 +236,44 @@ mod tests_simple_matrix {
     const Z1: Complex<f64> = Complex { re: 1., im: -1. };
     const Z2: Complex<f64> = Complex { re: -1., im: 1. };
 
+    const Z1_32: Complex<f32> = Complex { re: 1., im: -1. };
+    const Z2_32: Complex<f32> = Complex { re: -1., im: 1. };
+
     #[test]
     fn test_add_element() {
         let mut m = ComplexMatrix::new();
-        m.add_element(Entry {
-            row: 0,
-            col: 0,
-            value: Z1,
-        });
-        m.add_element(Entry {
-            row: 1,
-            col: 1,
-            value: Z2,
-        });
+        m.add_element(0, 0, Z1);
+        m.add_element(1, 1, Z2);
 
-        assert_eq!(m.get(0, 0).unwrap().value, Z1);
-        assert_eq!(m.get(1, 1).unwrap().value, Z2);
+        assert_eq!(*m.get(0, 0).unwrap(), Z1);
+        assert_eq!(*m.get(1, 1).unwrap(), Z2);
     }
 
     #[test]
-    fn test_add_elements() {
-        let mut m = ComplexMatrix::new();
-        let entries = vec![Entry::new(0, 0, Z1), Entry::new(1, 1, Z2)];
-        m.add_elements(entries);
-        assert_eq!(m.get(0, 0).unwrap().value, Z1);
-        assert_eq!(m.get(1, 1).unwrap().value, Z2);
+    fn test_from_elements() {
+        let entries = vec![(0, 0, Z1), (1, 1, Z2)];
+        let m = ComplexMatrix::from_entries(entries);
+        assert_eq!(*m.get(0, 0).unwrap(), Z1);
+        assert_eq!(*m.get(1, 1).unwrap(), Z2);
     }
 
     #[test]
-    #[ignore = "Solve not implemented"]
     fn test_solve() {
         let mut m = ComplexMatrix::new();
-        m.add_element(Entry::new(0, 0, Z1));
-        m.add_element(Entry::new(1, 1, Z2));
+        m.add_element(0, 0, Z1);
+        m.add_element(1, 1, Z2);
+        let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+        m.solve(&mut b).unwrap();
+
+        let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+        assert_eq!(b, expected);
+    }
+
+    #[test]
+    fn test_solve32() {
+        let mut m = ComplexMatrix::new();
+        m.add_element(0, 0, Z1_32);
+        m.add_element(1, 1, Z2_32);
         let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
         m.solve(&mut b).unwrap();
 

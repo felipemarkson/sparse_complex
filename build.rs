@@ -36,12 +36,13 @@ async fn main() -> Result<(), GenericError> {
         let mut archive = Archive::new(tar);
         archive.unpack(out_path)?;
         remove_file(eingen_tar_path)?;
-        cc::Build::new()
-            .cpp(true)
-            .include(eigen_dir)
-            .file("src/solver.cpp")
-            .compile("solver_cpp");
     }
+
+    cc::Build::new()
+        .cpp(true)
+        .include(eigen_dir)
+        .file("src/solver.cpp")
+        .compile("solver_cpp");
 
     Ok(())
 }
