@@ -28,3 +28,9 @@ cc ="1"
 version = "0.2"
 default-features = false
 # features = ["libm"]
+
+[package.metadata.docs.rs]
+rustdoc-args = [
+    "--html-in-header",
+    "./katex.html",
+]

@@ -3,6 +3,7 @@ mod tests {
     use super::data;
     use approx::assert_abs_diff_eq;
     use sparse_complex::*;
+    use num::Complex;
     #[test]
     fn test_3374_matrix() {
         let expected = data::X

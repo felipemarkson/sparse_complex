@@ -2,6 +2,7 @@
 mod tests {
     use approx::assert_abs_diff_eq;
     use sparse_complex::*;
+    use num::Complex;
     #[test]
     //#[ignore = "Solve not implemented"]
     fn test_simple_matrix() {

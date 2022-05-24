@@ -1,24 +1,17 @@
 /*!
-An abstraction layer for [sparse21](https://crates.io/crates/sparse21/) that adds support for complex sparse matrices.
+An simple solver for sparse complex linear systems based on [Eigen::SparseLU](https://eigen.tuxfamily.org/dox/classEigen_1_1SparseLU.html).
 
 ## Complex Number representation
 
-In this implementation, a complex number is represented as a tuple of ```f64```.
-Where the first element is the real part and the second is the imaginary part, as shown bellow:
-
-```rust
-let complex_number: (f64, f64) = (1.0 , 1.0); // 1 + j1
-```
-The use of ```f64``` is a limitation of [sparse21](https://crates.io/crates/sparse21/).
-
+We use [num::Complex<T>](https://docs.rs/num/latest/num/struct.Complex.html) to represent complex numbers. See [num](https://docs.rs/num/latest/num/) crate for more information.
 
 ## Example
 
 Lets consider the complex linear system bellow:
-<!-- $$
+```math
 \begin{bmatrix}
-1 + j1 & 0\\
-0 & 1+ j1
+1 - j1 & 0\\
+0 & -1 + j1
 \end{bmatrix}
 \begin{bmatrix}
 x_1 \\
@@ -28,41 +21,39 @@ x_2
 1 \\
 j1
 \end{bmatrix}
-$$ -->
-
-<div align="center"><img style="background: white;" src="https://render.githubusercontent.com/render/math?math=%5Cbegin%7Bbmatrix%7D%0A1%20%2B%20j1%20%26%200%5C%5C%0A0%20%26%201%2B%20j1%0A%5Cend%7Bbmatrix%7D%0A%5Cbegin%7Bbmatrix%7D%0Ax_1%20%5C%5C%0Ax_2%0A%5Cend%7Bbmatrix%7D%3D%0A%5Cbegin%7Bbmatrix%7D%0A1%20%5C%5C%0Aj1%0A%5Cend%7Bbmatrix%7D"></div>
+```
 
 We can solve this system as follows:
 
 ```rust
+use num::Complex;
 use sparse_complex::ComplexMatrix;
 
-let mut a = ComplexMatrix::new();
-a.add_element(0, 0, (1., 1.));
-a.add_element(1, 1, (1., 1.));
+let mut m = ComplexMatrix::<f64>::new();
+m.add_element(0, 0, Complex { re: 1., im: -1. });
+m.add_element(1, 1, Complex { re: -1., im: 1. });
+let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+m.solve(&mut b).unwrap();
 
-let b = [(1., 0.), (0., 1.)];
-
-let solution = a.solve(&b);
-assert_eq!(solution.unwrap(), vec![(0.5, -0.5), (0.5, 0.5)]);
+let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+assert_eq!(b, expected);
 ```
 
 The solution of this system is:
-<!-- $$
+```math
 \frac{1}{2}
 \begin{bmatrix}
-1 -j1 \\
-1 + j1
+1 + j1 \\
+1 - j1
 \end{bmatrix}
-$$ -->
-<div align="center"><img style="background: white;" src="https://render.githubusercontent.com/render/math?math=%5Cfrac%7B1%7D%7B2%7D%0A%5Cbegin%7Bbmatrix%7D%0A1%20-j1%20%5C%5C%0A1%20%2B%20j1%0A%5Cend%7Bbmatrix%7D"></div>
+```
 
 ## Vesion Compatible
-The ```sparse_complex``` crate is tested for rustc 1.50 and greater.
+The ```sparse_complex``` crate is tested for rustc 1.61 and greater.
 
 */
-pub use num::complex::Complex;
-pub use num_traits::float::Float;
+use num::complex::Complex;
+use num_traits::float::Float;
 use std::fmt;
 mod solver;
 
@@ -78,7 +69,7 @@ impl<T: Float> ComplexMatrix<T> {
     /// Create a new, initially empty ```ComplexMatrix```
     ///```rust
     /// use sparse_complex::ComplexMatrix;
-    /// let mut m = ComplexMatrix::new();
+    /// let mut m = ComplexMatrix::<f64>::new();
     ///```
     pub fn new() -> Self {
         ComplexMatrix {
@@ -88,6 +79,11 @@ impl<T: Float> ComplexMatrix<T> {
         }
     }
 
+    /// Create a new, initially empty ```ComplexMatrix``` with a given capacity
+    ///```rust
+    /// use sparse_complex::ComplexMatrix;
+    /// let mut m = ComplexMatrix::<f64>::with_capacity(5);
+    ///```
     pub fn with_capacity(capacity: usize) -> Self {
         ComplexMatrix {
             entries: Vec::with_capacity(capacity),
@@ -96,11 +92,12 @@ impl<T: Float> ComplexMatrix<T> {
         }
     }
 
-    /// Create a new ```ComplexMatrix``` from a vector of ```(row, col, (real, imag))``` entries.
+    /// Create a new ```ComplexMatrix``` from a vector of ```(row, col, Complex<T>)``` entries.
     ///```rust
     /// use sparse_complex::ComplexMatrix;
-    /// let entries = vec![(0, 0, (1., 1.)), (1, 1, (1., 1.))];
-    /// let mut m = ComplexMatrix::from_entries(entries);
+    /// use num::Complex;
+    /// let entries = vec![(0, 0, Complex::new(1., 1.)), (1, 1, Complex::new(1., 1.))];
+    /// let mut m = ComplexMatrix::<f64>::from_entries(entries);
     ///```
     pub fn from_entries(entries: Vec<(usize, usize, Complex<T>)>) -> Self {
         let mut m = ComplexMatrix::with_capacity(entries.len());
@@ -112,6 +109,20 @@ impl<T: Float> ComplexMatrix<T> {
     }
 
     /// Add or set an element at location ```(row, col)``` with value.
+    ///```rust
+    /// use sparse_complex::ComplexMatrix;
+    /// use num::Complex;
+    /// 
+    /// let Z1: Complex<f64> = Complex { re: 1., im: -1. };
+    /// let Z2: Complex<f64> = Complex { re: -1., im: 1. };
+    /// 
+    /// let mut m = ComplexMatrix::new();
+    /// m.add_element(0, 0, Z1);
+    /// m.add_element(1, 1, Z2);
+    /// 
+    /// assert_eq!(m.get(0, 0), Some(&Z1));
+    /// assert_eq!(m.get(1, 1), Some(&Z2));
+    ///```
     pub fn add_element(&mut self, row: usize, col: usize, value: Complex<T>) {
         self.entries.push(value);
         self.rows.push(row);
@@ -121,11 +132,17 @@ impl<T: Float> ComplexMatrix<T> {
     ///  Returns the Element-value at ```(row, col)``` if present, or None if not.
     ///```rust
     /// use sparse_complex::ComplexMatrix;
-    /// let entries = vec![(0, 0, (1., -1.)), (1, 1, (-1., 1.))];
-    /// let mut m = ComplexMatrix::from_entries(entries);
-    /// assert_eq!(m.get(2,1), None);
-    /// assert_eq!(m.get(0,0), Some((1., -1.)));
-    /// assert_eq!(m.get(1,1), Some((-1., 1.)));
+    /// use num::Complex;
+    /// 
+    /// let Z1: Complex<f64> = Complex { re: 1., im: -1. };
+    /// let Z2: Complex<f64> = Complex { re: -1., im: 1. };
+    /// 
+    /// let mut m = ComplexMatrix::new();
+    /// m.add_element(0, 0, Z1);
+    /// m.add_element(1, 1, Z2);
+    /// 
+    /// assert_eq!(m.get(0, 0), Some(&Z1));
+    /// assert_eq!(m.get(1, 1), Some(&Z2));
     ///```
     pub fn get(&self, row: usize, col: usize) -> Option<&Complex<T>> {
         self.rows
@@ -141,24 +158,28 @@ impl ComplexMatrix<f64> {
     /// Solve the system `Ax=b`, where:
     /// * `A` is a complex matrix
     /// * `b` is a complex vector
-    /// * `x` is the return value.
     ///
-    /// Returns a `Result` containing the vector with ```(real, imag)``` solutions.
-    /// Returns an `Err` if unsuccessful.
+    /// Returns a `Result`. `Ok(())` if the system was solved successfully, `Err(String)` if not. 
+    /// The result is stored in `b`.
     ///
-    /// This solution use the LU factorization implemented by [sparse21](https://crates.io/crates/sparse21/).
+    /// The solution use the [Eigen::SparseLU](https://eigen.tuxfamily.org/dox/classEigen_1_1SparseLU.html).
     ///
     ///```rust
-    ///     use sparse_complex::ComplexMatrix;
-    ///
-    ///     let mut A = ComplexMatrix::new();
-    ///     A.add_element(0, 0, (1., 1.));
-    ///     A.add_element(1, 1, (1., 1.));
-    ///
-    ///     let b = [(1., 0.), (0., 1.)];
-    ///
-    ///     let solution = A.solve(&b);
-    ///     assert_eq!(solution.unwrap(), vec![(0.5, -0.5), (0.5, 0.5)]);
+    /// use sparse_complex::ComplexMatrix;
+    /// use num::Complex;
+    /// 
+    /// let Z1: Complex<f64> = Complex { re: 1., im: -1. };
+    /// let Z2: Complex<f64> = Complex { re: -1., im: 1. };
+    /// 
+    /// let mut m = ComplexMatrix::new();
+    /// m.add_element(0, 0, Z1);
+    /// m.add_element(1, 1, Z2);
+    /// 
+    /// let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+    /// m.solve(&mut b).unwrap();
+    /// 
+    /// let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+    /// assert_eq!(b, expected);
     ///```
     pub fn solve(&self, b: &mut [Complex<f64>]) -> Result<(), &'static str> {
         unsafe {
@@ -180,24 +201,28 @@ impl ComplexMatrix<f32> {
     /// Solve the system `Ax=b`, where:
     /// * `A` is a complex matrix
     /// * `b` is a complex vector
-    /// * `x` is the return value.
     ///
-    /// Returns a `Result` containing the vector with ```(real, imag)``` solutions.
-    /// Returns an `Err` if unsuccessful.
+    /// Returns a `Result`. `Ok(())` if the system was solved successfully, `Err(String)` if not. 
+    /// The result is stored in `b`.
     ///
-    /// This solution use the LU factorization implemented by [sparse21](https://crates.io/crates/sparse21/).
+    /// This solution use the [Eigen::SparseLU](https://eigen.tuxfamily.org/dox/classEigen_1_1SparseLU.html).
     ///
     ///```rust
-    ///     use sparse_complex::ComplexMatrix;
-    ///
-    ///     let mut A = ComplexMatrix::new();
-    ///     A.add_element(0, 0, (1., 1.));
-    ///     A.add_element(1, 1, (1., 1.));
-    ///
-    ///     let b = [(1., 0.), (0., 1.)];
-    ///
-    ///     let solution = A.solve(&b);
-    ///     assert_eq!(solution.unwrap(), vec![(0.5, -0.5), (0.5, 0.5)]);
+    /// use sparse_complex::ComplexMatrix;
+    /// use num::Complex;
+    /// 
+    /// let Z1: Complex<f32> = Complex { re: 1., im: -1. };
+    /// let Z2: Complex<f32> = Complex { re: -1., im: 1. };
+    /// 
+    /// let mut m = ComplexMatrix::new();
+    /// m.add_element(0, 0, Z1);
+    /// m.add_element(1, 1, Z2);
+    /// 
+    /// let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+    /// m.solve(&mut b).unwrap();
+    /// 
+    /// let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+    /// assert_eq!(b, expected);
     ///```
     pub fn solve(&self, b: &mut [Complex<f32>]) -> Result<(), &'static str> {
         unsafe {
@@ -230,54 +255,54 @@ impl<T: Float + std::fmt::Display> fmt::Debug for ComplexMatrix<T> {
     }
 }
 
-#[cfg(test)]
-mod tests_simple_matrix {
-    use super::*;
-    const Z1: Complex<f64> = Complex { re: 1., im: -1. };
-    const Z2: Complex<f64> = Complex { re: -1., im: 1. };
+// #[cfg(test)]
+// mod tests_simple_matrix {
+//     use super::*;
+//     const Z1: Complex<f64> = Complex { re: 1., im: -1. };
+//     const Z2: Complex<f64> = Complex { re: -1., im: 1. };
 
-    const Z1_32: Complex<f32> = Complex { re: 1., im: -1. };
-    const Z2_32: Complex<f32> = Complex { re: -1., im: 1. };
+//     const Z1_32: Complex<f32> = Complex { re: 1., im: -1. };
+//     const Z2_32: Complex<f32> = Complex { re: -1., im: 1. };
 
-    #[test]
-    fn test_add_element() {
-        let mut m = ComplexMatrix::new();
-        m.add_element(0, 0, Z1);
-        m.add_element(1, 1, Z2);
+//     #[test]
+//     fn test_add_element() {
+//         let mut m = ComplexMatrix::new();
+//         m.add_element(0, 0, Z1);
+//         m.add_element(1, 1, Z2);
 
-        assert_eq!(*m.get(0, 0).unwrap(), Z1);
-        assert_eq!(*m.get(1, 1).unwrap(), Z2);
-    }
+//         assert_eq!(*m.get(0, 0).unwrap(), Z1);
+//         assert_eq!(*m.get(1, 1).unwrap(), Z2);
+//     }
 
-    #[test]
-    fn test_from_elements() {
-        let entries = vec![(0, 0, Z1), (1, 1, Z2)];
-        let m = ComplexMatrix::from_entries(entries);
-        assert_eq!(*m.get(0, 0).unwrap(), Z1);
-        assert_eq!(*m.get(1, 1).unwrap(), Z2);
-    }
+//     #[test]
+//     fn test_from_elements() {
+//         let entries = vec![(0, 0, Z1), (1, 1, Z2)];
+//         let m = ComplexMatrix::from_entries(entries);
+//         assert_eq!(*m.get(0, 0).unwrap(), Z1);
+//         assert_eq!(*m.get(1, 1).unwrap(), Z2);
+//     }
 
-    #[test]
-    fn test_solve() {
-        let mut m = ComplexMatrix::new();
-        m.add_element(0, 0, Z1);
-        m.add_element(1, 1, Z2);
-        let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
-        m.solve(&mut b).unwrap();
+//     #[test]
+//     fn test_solve() {
+//         let mut m = ComplexMatrix::new();
+//         m.add_element(0, 0, Z1);
+//         m.add_element(1, 1, Z2);
+//         let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+//         m.solve(&mut b).unwrap();
 
-        let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
-        assert_eq!(b, expected);
-    }
+//         let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+//         assert_eq!(b, expected);
+//     }
 
-    #[test]
-    fn test_solve32() {
-        let mut m = ComplexMatrix::new();
-        m.add_element(0, 0, Z1_32);
-        m.add_element(1, 1, Z2_32);
-        let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
-        m.solve(&mut b).unwrap();
+//     #[test]
+//     fn test_solve32() {
+//         let mut m = ComplexMatrix::new();
+//         m.add_element(0, 0, Z1_32);
+//         m.add_element(1, 1, Z2_32);
+//         let mut b = vec![Complex::new(1., 0.), Complex::new(0., 1.)];
+//         m.solve(&mut b).unwrap();
 
-        let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
-        assert_eq!(b, expected);
-    }
-}
+//         let expected = vec![Complex::new(0.5, 0.5), Complex::new(0.5, -0.5)];
+//         assert_eq!(b, expected);
+//     }
+// }
