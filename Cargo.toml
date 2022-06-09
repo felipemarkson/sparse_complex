@@ -1,6 +1,6 @@
 [package]
 name = "sparse_complex"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Felipe M. dos S. Monteiro"]
 edition = "2021"
 license = "MIT"
@@ -10,27 +10,22 @@ readme = "README.md"
 categories = ["data-structures", "mathematics", "science"]
 keywords = ["linear-algebra", "sparse", "complex", "algebra", "matrix"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 approx = "0.5"
 num ="0.4.0"
 
 [build-dependencies]
-reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
+openssl = { version = "0.10", features = ["vendored"], optional = true}
 flate2 = "1.0"
 tar = "0.4"
 libc = "0.2.0"
 cc ="1"
+curl = "0.4"
 
 [dependencies.num-traits]
 version = "0.2"
 default-features = false
-# features = ["libm"]
 
 [package.metadata.docs.rs]
-rustdoc-args = [
-    "--html-in-header",
-    ".cargo/registry/src/github.com-1ecc6299db9ec823/katex-doc-0.1.0/katex.html",
-]
+rustdoc-args = [ "--html-in-header", "katex.html" ]
+features = [ "openssl" ]
